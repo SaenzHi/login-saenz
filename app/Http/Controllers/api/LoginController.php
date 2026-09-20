@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\api;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -8,120 +8,73 @@ use Illuminate\Support\Facades\DB;
 
 class LoginController extends Controller
 {
-
     public function login()
     {
-        $respuesta = [
+        return response()->json([
             'success' => true,
-            'login' => [
-                'correo' => null,
-                'passwordd' => null
-            ],
+            'login' => ['correo' => null, 'passwordd' => null],
             'message' => 'Login disponible',
             'status' => 200
-        ];
-
-        return response()->json($respuesta, 200);
+        ], 200);
     }
-
-
 
     public function post_login(Request $request)
     {
-        $correo = $request->correo;
-        $passwordd = $request->passwordd;
+        $usuarioLogueado = DB::select('CALL sp_Usuario_Login(?, ?)', [$request->correo, $request->passwordd]);
+        $isSuccess = count($usuarioLogueado) > 0;
+        $statusCode = $isSuccess ? 200 : 404;
 
-        $usuario = DB::select(
-            'CALL sp_Usuario_Login(?, ?)',
-            [$correo, $passwordd]
-        );
-
-        $success = count($usuario) > 0;
-        $status = $success ? 200 : 404;
-
-        $respuesta = [
-            'success' => $success,
-            'usuario' => $success ? $usuario : null,
-            'message' => $success
-                ? 'Inicio de sesión correcto'
-                : 'Correo o contraseña incorrectos',
-            'status' => $status
+        $responseData = [
+            'success' => $isSuccess,
+            'usuario' => $isSuccess ? $usuarioLogueado : null,
+            'message' => $isSuccess ? 'Inicio de sesión correcto' : 'Correo o contraseña incorrectos',
+            'status' => $statusCode
         ];
-
-        return response()->json($respuesta, $status);
+        return response()->json($responseData, $statusCode);
     }
-
 
     public function register()
     {
-        $respuesta = [
+        return response()->json([
             'success' => true,
-            'registro' => [
-                'nombres' => null,
-                'correo' => null,
-                'passwordd' => null
-            ],
+            'registro' => ['nombres' => null, 'correo' => null, 'passwordd' => null],
             'message' => 'Registro disponible',
             'status' => 200
-        ];
-
-        return response()->json($respuesta, 200);
+        ], 200);
     }
-
-
 
     public function save(Request $request)
     {
-        $nombres = $request->nombres;
-        $correo = $request->correo;
-        $passwordd = $request->passwordd;
+        DB::statement('CALL sp_Usuario_Guardar(?, ?, ?)', [$request->nombres, $request->correo, $request->passwordd]);
+        $usuarioGuardado = DB::select('SELECT * FROM Usuario WHERE Correo = ?', [$request->correo]);
+        
+        $isSuccess = count($usuarioGuardado) > 0;
+        $statusCode = $isSuccess ? 200 : 404;
 
-        DB::statement(
-            'CALL sp_Usuario_Guardar(?, ?, ?)',
-            [$nombres, $correo, $passwordd]
-        );
-
-        $usuario = DB::select('SELECT * FROM Usuario WHERE Correo = ?',[$correo]);
-
-        $success = count($usuario) > 0;
-        $status = $success ? 200 : 404;
-
-        $respuesta = [
-            'success' => $success,
-            'usuario' => $success ? $usuario : null,
-            'message' => $success
-                ? 'Usuario registrado correctamente'
-                : 'No se pudo registrar el usuario',
-            'status' => $status
+        $responseData = [
+            'success' => $isSuccess,
+            'usuario' => $isSuccess ? $usuarioGuardado : null,
+            'message' => $isSuccess ? 'Usuario registrado correctamente' : 'No se pudo registrar el usuario',
+            'status' => $statusCode
         ];
-
-        return response()->json($respuesta, $status);
+        return response()->json($responseData, $statusCode);
     }
-
 
     public function recover()
     {
-        $respuesta = [
+        return response()->json([
             'success' => true,
-            'recuperar' => [
-                'correo' => null
-            ],
+            'recuperar' => ['correo' => null],
             'message' => 'Recuperación disponible',
             'status' => 200
-        ];
-
-        return response()->json($respuesta, 200);
+        ], 200);
     }
-
-
 
     public function send_code(Request $request)
     {
-        $correo = $request->correo;
+        $usuarioEncontrado = DB::select('SELECT * FROM Usuario WHERE Correo = ?', [$request->correo]);
 
-        $usuario = DB::select('SELECT * FROM Usuario WHERE Correo = ?',[$correo]);
-
-        if (count($usuario) == 0) {
+        if (count($usuarioEncontrado) == 0) {
             return response()->json([
                 'success' => false,
                 'codigo' => null,
@@ -130,105 +83,68 @@ class LoginController extends Controller
             ], 404);
         }
 
-        $resultado = DB::select(
-            'CALL sp_Usuario_Codigo(?)',
-            [$correo]
-        );
+        $resultadoCodigo = DB::select('CALL sp_Usuario_Codigo(?)', [$request->correo]);
+        $isSuccess = count($resultadoCodigo) > 0;
+        $statusCode = $isSuccess ? 200 : 404;
 
-        $success = count($resultado) > 0;
-        $status = $success ? 200 : 404;
-
-        $respuesta = [
-            'success' => $success,
-            'codigo' => $success ? $resultado : null,
-            'message' => $success
-                ? 'Código generado correctamente'
-                : 'No se pudo generar el código',
-            'status' => $status
+        $responseData = [
+            'success' => $isSuccess,
+            'codigo' => $isSuccess ? $resultadoCodigo : null,
+            'message' => $isSuccess ? 'Código generado correctamente' : 'No se pudo generar el código',
+            'status' => $statusCode
         ];
-
-        return response()->json($respuesta, $status);
+        return response()->json($responseData, $statusCode);
     }
-
 
     public function validate()
     {
-        $respuesta = [
+        return response()->json([
             'success' => true,
-            'validar' => [
-                'codigo' => null
-            ],
+            'validar' => ['codigo' => null],
             'message' => 'Validación disponible',
             'status' => 200
-        ];
-
-        return response()->json($respuesta, 200);
+        ], 200);
     }
-
-
 
     public function validate_code(Request $request)
     {
-        $codigo = $request->codigo;
+        $resultadoValidacion = DB::select('CALL sp_Usuario_Validar(?)', [$request->codigo]);
+        $isSuccess = count($resultadoValidacion) > 0;
+        $statusCode = $isSuccess ? 200 : 404;
 
-        $resultado = DB::select('CALL sp_Usuario_Validar(?)',[$codigo]);
-
-        $success = count($resultado) > 0;
-        $status = $success ? 200 : 404;
-
-        $respuesta = [
-            'success' => $success,
-            'codigo' => $success ? $resultado : null,
-            'message' => $success
-                ? 'Código válido'
-                : 'Código incorrecto o expirado',
-            'status' => $status
+        $responseData = [
+            'success' => $isSuccess,
+            'codigo' => $isSuccess ? $resultadoValidacion : null,
+            'message' => $isSuccess ? 'Código válido' : 'Código incorrecto o expirado',
+            'status' => $statusCode
         ];
-
-        return response()->json($respuesta, $status);
+        return response()->json($responseData, $statusCode);
     }
-
-
 
     public function passwordd()
     {
-        $respuesta = [
+        return response()->json([
             'success' => true,
-            'passwordd' => [
-                'correo' => null,
-                'passwordd' => null
-            ],
+            'passwordd' => ['correo' => null, 'passwordd' => null],
             'message' => 'Servicio de cambio de contraseña disponible',
             'status' => 200
-        ];
-
-        return response()->json($respuesta, 200);
+        ], 200);
     }
 
-
-
-     public function update_passwordd(Request $request)
+    public function update_passwordd(Request $request)
     {
-        $correo = $request->correo;
-        $passwordd = $request->passwordd;
+        DB::statement('CALL sp_Usuario_UpdatePasswordd(?, ?)', [$request->correo, $request->passwordd]);
+        $usuarioActualizado = DB::select('SELECT * FROM Usuario WHERE Correo = ?', [$request->correo]);
 
-        DB::statement('CALL sp_Usuario_UpdatePasswordd(?, ?)',[$correo, $passwordd]);
+        $isSuccess = count($usuarioActualizado) > 0;
+        $statusCode = $isSuccess ? 200 : 404;
 
-        $usuario = DB::select('SELECT * FROM Usuario WHERE Correo = ?', [$correo]);
-
-        $success = count($usuario) > 0;
-        $status = $success ? 200 : 404;
-
-        $respuesta = [
-            'success' => $success,
-            'usuario' => $success ? $usuario : null,
-            'message' => $success
-                ? 'Contraseña actualizada correctamente'
-                : 'No existe el usuario',
-            'status' => $status
+        $responseData = [
+            'success' => $isSuccess,
+            'usuario' => $isSuccess ? $usuarioActualizado : null,
+            'message' => $isSuccess ? 'Contraseña actualizada correctamente' : 'No existe el usuario',
+            'status' => $statusCode
         ];
-
-        return response()->json($respuesta, $status);
+        return response()->json($responseData, $statusCode);
     }
-
 }
