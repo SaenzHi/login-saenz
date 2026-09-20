@@ -8,143 +8,96 @@ use Illuminate\Support\Facades\DB;
 
 class LoginController extends Controller
 {
-    public function login()
+    private function generarRespuesta($data, $clave, $msjExito, $msjError)
+    {
+        $success = !empty($data);
+        $status = $success ? 200 : 404;
+
+        return response()->json([
+            'success' => $success,
+            $clave => $success ? $data : null,
+            'message' => $success ? $msjExito : $msjError,
+            'status' => $status
+        ], $status);
+    }
+
+    private function generarPreguntaxd($clave, $pedido, $msj)
     {
         return response()->json([
             'success' => true,
-            'login' => ['correo' => null, 'passwordd' => null],
-            'message' => 'Login disponible',
+            $clave => $pedido,
+            'message' => $msj,
             'status' => 200
         ], 200);
     }
-
-    public function post_login(Request $request)
+    
+    public function login()
     {
-        $usuarioLogueado = DB::select('CALL sp_Usuario_Login(?, ?)', [$request->correo, $request->passwordd]);
-        $isSuccess = count($usuarioLogueado) > 0;
-        $statusCode = $isSuccess ? 200 : 404;
+        return $this->generarPreguntaxd('login', ['correo' => null, 'passwordd' => null], 'Login disponible');
+    }
 
-        $responseData = [
-            'success' => $isSuccess,
-            'usuario' => $isSuccess ? $usuarioLogueado : null,
-            'message' => $isSuccess ? 'Inicio de sesión correcto' : 'Correo o contraseña incorrectos',
-            'status' => $statusCode
-        ];
-        return response()->json($responseData, $statusCode);
+    public function postLogin(Request $request)
+    {
+        $usuario = DB::select('CALL sp_Usuario_Login(?, ?)', [$request->correo, $request->passwordd]);
+        return $this->generarRespuesta($usuario, 'usuario', 'Inicio de sesión correcto', 'Correo o contraseña incorrectos');
     }
 
     public function register()
     {
-        return response()->json([
-            'success' => true,
-            'registro' => ['nombres' => null, 'correo' => null, 'passwordd' => null],
-            'message' => 'Registro disponible',
-            'status' => 200
-        ], 200);
+        return $this->generarPreguntaxd('registro', ['nombres' => null, 'correo' => null, 'passwordd' => null], 'Registro disponible');
     }
 
     public function save(Request $request)
     {
         DB::statement('CALL sp_Usuario_Guardar(?, ?, ?)', [$request->nombres, $request->correo, $request->passwordd]);
-        $usuarioGuardado = DB::select('SELECT * FROM Usuario WHERE Correo = ?', [$request->correo]);
+        $usuario = DB::select('SELECT * FROM Usuario WHERE Correo = ?', [$request->correo]);
         
-        $isSuccess = count($usuarioGuardado) > 0;
-        $statusCode = $isSuccess ? 200 : 404;
-
-        $responseData = [
-            'success' => $isSuccess,
-            'usuario' => $isSuccess ? $usuarioGuardado : null,
-            'message' => $isSuccess ? 'Usuario registrado correctamente' : 'No se pudo registrar el usuario',
-            'status' => $statusCode
-        ];
-        return response()->json($responseData, $statusCode);
+        return $this->generarRespuesta($usuario, 'usuario', 'Usuario registrado correctamente', 'No se pudo registrar el usuario');
     }
 
     public function recover()
     {
-        return response()->json([
-            'success' => true,
-            'recuperar' => ['correo' => null],
-            'message' => 'Recuperación disponible',
-            'status' => 200
-        ], 200);
+        return $this->generarPreguntaxd('recuperar', ['correo' => null], 'Recuperación disponible');
     }
 
-    public function send_code(Request $request)
+    public function sendCode(Request $request)
     {
-        $usuarioEncontrado = DB::select('SELECT * FROM Usuario WHERE Correo = ?', [$request->correo]);
+        $usuario = DB::select('SELECT * FROM Usuario WHERE Correo = ?', [$request->correo]);
 
-        if (count($usuarioEncontrado) == 0) {
+        if (empty($usuario)) {
             return response()->json([
                 'success' => false,
                 'codigo' => null,
-                'message' => 'No existe un usuario con ese correo',
+                'message' => 'No existe un usuario con ese correo >:(',
                 'status' => 404
             ], 404);
         }
 
-        $resultadoCodigo = DB::select('CALL sp_Usuario_Codigo(?)', [$request->correo]);
-        $isSuccess = count($resultadoCodigo) > 0;
-        $statusCode = $isSuccess ? 200 : 404;
-
-        $responseData = [
-            'success' => $isSuccess,
-            'codigo' => $isSuccess ? $resultadoCodigo : null,
-            'message' => $isSuccess ? 'Código generado correctamente' : 'No se pudo generar el código',
-            'status' => $statusCode
-        ];
-        return response()->json($responseData, $statusCode);
+        $codigo = DB::select('CALL sp_Usuario_Codigo(?)', [$request->correo]);
+        return $this->generarRespuesta($codigo, 'codigo', 'Código generado correctamente', 'No se pudo generar el código');
     }
 
     public function validate()
     {
-        return response()->json([
-            'success' => true,
-            'validar' => ['codigo' => null],
-            'message' => 'Validación disponible',
-            'status' => 200
-        ], 200);
+        return $this->generarPreguntaxd('validar', ['codigo' => null], 'Validación disponible');
     }
 
-    public function validate_code(Request $request)
+    public function validateCode(Request $request)
     {
-        $resultadoValidacion = DB::select('CALL sp_Usuario_Validar(?)', [$request->codigo]);
-        $isSuccess = count($resultadoValidacion) > 0;
-        $statusCode = $isSuccess ? 200 : 404;
-
-        $responseData = [
-            'success' => $isSuccess,
-            'codigo' => $isSuccess ? $resultadoValidacion : null,
-            'message' => $isSuccess ? 'Código válido' : 'Código incorrecto o expirado',
-            'status' => $statusCode
-        ];
-        return response()->json($responseData, $statusCode);
+        $codigo = DB::select('CALL sp_Usuario_Validar(?)', [$request->codigo]);
+        return $this->generarRespuesta($codigo, 'codigo', 'Código válido', 'Código incorrecto o expirado');
     }
 
     public function passwordd()
     {
-        return response()->json([
-            'success' => true,
-            'passwordd' => ['correo' => null, 'passwordd' => null],
-            'message' => 'Servicio de cambio de contraseña disponible',
-            'status' => 200
-        ], 200);
+        return $this->generarPreguntaxd('passwordd', ['correo' => null, 'passwordd' => null], 'Servicio de cambio de contraseña disponible');
     }
 
-    public function update_passwordd(Request $request)
+    public function updatePasswordd(Request $request)
     {
         DB::statement('CALL sp_Usuario_UpdatePasswordd(?, ?)', [$request->correo, $request->passwordd]);
-        $usuarioActualizado = DB::select('SELECT * FROM Usuario WHERE Correo = ?', [$request->correo]);
+        $usuario = DB::select('SELECT * FROM Usuario WHERE Correo = ?', [$request->correo]);
 
-        $isSuccess = count($usuarioActualizado) > 0;
-        $statusCode = $isSuccess ? 200 : 404;
-
-        $responseData = [
-            'success' => $isSuccess,
-            'usuario' => $isSuccess ? $usuarioActualizado : null,
-            'message' => $isSuccess ? 'Contraseña actualizada correctamente' : 'No existe el usuario',
-            'status' => $statusCode
-        ];
-        return response()->json($responseData, $statusCode);
+        return $this->generarRespuesta($usuario, 'usuario', 'Contraseña actualizada correctamente', 'No existe el usuario');
     }
 }
